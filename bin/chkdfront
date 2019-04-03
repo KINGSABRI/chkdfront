@@ -1,0 +1,173 @@
+#!/usr/bin/env ruby
+#
+# @Author: KING SABRI - @KINGSABRI
+#
+require 'chkdfront'
+
+logo = %Q{
+MMMMMMMMMMMMMWNK0kdolc;,'      ;KMMMMMMMMMMMMMMMMMMMMMMMMMMM
+MMMMMMMMMN0xl;'.                lNMMMMMMMMMMMMMMMMMMMMMMMMMM
+MMMMMWKxc'.                     .kWMMMMMMMMMMMMMMMMMMMMMMMMM
+MMN0o;.                          ;XMMMMMMMMMMMMMMMMMMMMMMMMM
+Ol,.                             .xWMMMMMMMMMMMMMMMMMMMMMMMM
+'                        .        ;XMMMMMMMMMMMMMMMMMMMMMMMM
+l                    .;dO00ko;'.  .kMMMMMMMMMMMMMMMMMMMMMMMM
+X:                   .dKNWWXOl,.   oWMMMMMMMMMMMMMMMMMMMMMMM
+M0,        'ldkx;      .',,..,;:cc;dNMMMMMMMMMMMMMMMMMMMMMMM
+MWk.     .doMaiN.          ;ONWWWWWWMMMMMMMMMMMMMMMMMMMMMMMM
+MMWx.    lXXKkc.          :XMXOo;;coxOKNWMMMMMMMMMMMMMMMMMMM
+MMMWx.   ....            ;KMXc.       .';cdkKNMMMMMMMMMMMMMM
+MMMMWk.            .:oxxkXMNl               .,cx0NMMMMMMMMMM
+MMMMMWO,         .oXWWXNMMNo.                   .,lONMMMMMMM
+MMMMMMMXl.      .kNOo,;OWWx.                        'lONMMMM
+MMMMMMMMWO;    .lx;.  lNMO'                           .,dKWM
+MMMMMMMMMMNx;. ..    ,0MX:   .,:ll:,.                    .:x
+MMMMMMMMMMMMNOc.    .dWWx.   .'lXWMNOc.                    .
+MMMMMMMMMMMMMMWXOo:':KMX:       .cxO0k;                   .o
+MMMMMMMMMMMMMMMMMMWNNWMk.                 ,domain.        .N
+MMMMMMMMMMMMMMMMMMMMMMWo                  .fronting     .dNM
+MMMMMMMMMMMMMMMMMMMMMMNc    ;,              'cdxko.    .kWMM
+MMMMMMMMMMMMMMMMMMMMMMNc    lKOl.                     ;0WMMM
+MMMMMMMMMMMMMMMMMMMMMMWo    ,KMW0l.                 .lXMMMMM
+MMMMMMMMMMMMMMMMMMMMMMMk.    :kKMWXOdolcc:,.       ,kWMMMMMM
+MMMMMMMMMMMMMMMMMMMMMMMNc     .'o0XNNNKOo;.      'dXMMMMMMMM
+MMMMMMMMMMMMMMMMMMMMMMMMK;       ..''..        'dXWMMMMMMMMM
+MM By: #{'@KINGSABRI'.bold} MMMMMMKc                  .:xXMMMMMMMMMMMM
+MM #{'chkdfront'.bold} v#{ChkDFront::VERSION} MMMMNk;.            .'cxKWMMMMMMMMMMMMMM
+MMMMMMMMMMMMMMMMMMMMMMMMMMMMNxl:'....':oOXWMMMMMMMMMMMMMMMMM
+}
+
+CLI::UI::StdoutRouter.enable
+
+options = OpenStruct.new(
+    front_target: nil, domain_front: nil, provider: :auto,
+    expect: nil,  proxy: nil, debug: false, tshoot: false
+)
+option_parser = OptionParser.new do |opts|
+  opts.banner = "Check DomainFront (chkdfront) - A tool verifies domain fronting."
+  opts.separator ""
+  opts.separator "Help menu:"
+
+  opts.on("-f", "--front-target URL", "Fronted target domain or URL.", "\te.g. images.businessweek.com") do |o|
+    options.front_target = o
+  end
+
+  opts.on("-d", "--domain-front DOMAIN", "DomainFront domain.", "\te.g. df36z1umwj2fze.cloudfront.net") do |o|
+    options.domain_front = o
+  end
+
+  opts.on("-e", "--expect STRING", "Expect a given string that indicates success. (case-sensitive)", "\te.g. It works") do |o|
+    options.expect = o
+  end
+
+  opts.on("-p", "--provider NUM",
+          "Choose CDN / Domain Front Provider:", Integer,
+          "\t[0] Auto    (default - auto tune request. Extra request to detect)",
+          "\t[1] Amazon  (tune request for Amazon domain fronting)",
+          "\t[2] Azure   (tune request for Azure domain fronting)",
+          "\t[3] Alibaba (tune request for Alibaba domain fronting)") do |provider|
+    case provider.to_i
+    when 0
+      options.provider = :auto
+    when 1
+      options.provider = :amazon
+    when 2
+      options.provider = :azure
+    when 3
+      options.provider = :alibaba
+    else
+      puts "[!] Unknown Provider: switching to auto.."
+      options.provider = :auto
+    end
+  end
+
+  opts.on("-t", "--troubleshoot [DOMAIN]", "Force troubleshooting procedures.",
+          "execute troubleshooting procedures(ping, http, nslookup) for all parties",
+          "(optional: original domain where CDN forwards, to include in the checks)",
+          "\te.g. c2.mydomain.com") do |o|
+    options.tshoot = o
+  end
+
+  opts.on("--proxy USER:PASS@HOST:PORT", "Use proxy settings if you're behind proxy.",
+          "\te.g. user1:Pass123@localhost:8080") do |o|
+    options.proxy = o
+  end
+
+  opts.on("--debug", "Force debugging.",
+          "show response's body and low-level request and response debug trace.",
+          "(default enabled when test fails.)"
+          ) do |o|
+    options.debug = o
+  end
+
+  opts.on("-h", "--help", "Show this message.") do
+    puts logo
+    puts opts
+    exit!
+  end
+
+  opts.on_tail "\nUsage:\n" + "  #{$PROGRAM_NAME} <OPTIONS>"
+  opts.on_tail "Example:"
+  opts.on_tail %{  #{$PROGRAM_NAME} -f images.businessweek.com -d df36z1umwj2fze.cloudfront.net}
+  opts.on_tail %{  #{$PROGRAM_NAME} -f images.businessweek.com -d df36z1umwj2fze.cloudfront.net --debug -t c2.mysite.com\n\n}
+end
+
+begin
+  option_parser.parse!(ARGV)
+  if (options.front_target || options.domain_front).nil?
+    puts option_parser
+  end
+
+  # list of hosts to troubleshoot later
+  hosts = [options.front_target, options.domain_front, options.tshoot].compact
+  cli = ChkDFront::CliOperations.new
+
+  if options.front_target && options.domain_front
+    spnr_opts = {output: $stdout, clear: true, format: :arrow_pulse, hide_cursor: true}
+    spinner = TTY::Spinner.new("[:spinner] please wait!", spnr_opts)
+    spinner.auto_spin
+
+    http = ChkDFront::Request.new(options.front_target, options.domain_front, options.proxy)
+    http.send_to(cli.find_provider(options.provider, options.domain_front))
+    cli.http     = http
+    cli.request  = http.request
+    cli.response = http.response
+
+    res  = http.response
+    # if the request succeeded
+    if res.code.to_i == 200
+      CLI::UI::Frame.open('Request', color: :bold, timing: false) do
+        CLI::UI::Frame.open("Response | #{res.message} (#{res.code})", color: :green, timing: false) do
+          cli.show_success
+          cli.show_expected(options.expect) if options.expect
+          cli.show_body; cli.show_debug     if options.debug
+        end
+      end
+      # if the user want to troubleshoot even request has succeeded
+      if options.tshoot || options.tshoot.nil?
+        CLI::UI::Frame.open('Troubleshooting'.bold, color: :magenta, timing: false) do
+          cli.troubleshoot(hosts)
+        end
+      end
+    else  # If request failed, troubleshoot
+      CLI::UI::Frame.open('Request', color: :bold, timing: false) do
+        CLI::UI::Frame.open("Response | #{res.message} (#{res.code})", color: :red, timing: false) do
+          cli.show_checks
+          cli.show_body
+          cli.show_debug
+        end
+      end
+      CLI::UI::Frame.open('Troubleshooting', color: :magenta, timing: false) { cli.troubleshoot(hosts) }
+    end
+  end
+rescue OptionParser::MissingArgument => e
+  puts option_parser
+  e.args.each {|arg| puts '[!] '+ "#{e.reason.capitalize} for '#{arg}' option."}
+rescue OptionParser::InvalidOption => e
+  puts option_parser
+  pp e
+rescue Exception => e
+  puts "#{$PROGRAM_NAME} Exception".error
+  puts e.backtrace_locations
+  puts e
+end
