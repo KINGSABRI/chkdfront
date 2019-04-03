@@ -157,7 +157,7 @@ module ChkDFront
                 "  - is service up?",
                 "  - is service port correct?",
                 "- Check your provider:",
-                "  - is front domain name correct? (#{@domain_front})",
+                "  - is front domain name correct? (#{@domain_front.host})",
                 "  - is destination port correct?.",
             ]
         }
@@ -166,7 +166,7 @@ module ChkDFront
             orig:  response,
             checks: [
                 "- Check your provider:",
-                "  - is front domain name correct? (#{@domain_front})",
+                "  - is front domain name correct? (#{@domain_front.host})",
                 "- Check your target:",
                 "  - is target domain correct? (#{@front_target.host})",
                 "  - is target port correct? (#{@front_target.port})"
