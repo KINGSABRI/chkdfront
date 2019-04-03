@@ -14,6 +14,9 @@ module ChkDFront
     def self.dns_ping(host)
       dns = Net::DNS::Resolver.start(host)
       dns.answer.select {|r| r.type == "CNAME"}&.map(&:cname)
+    rescue Exception => e
+      puts e.message
+      return []
     end
   end
 end
