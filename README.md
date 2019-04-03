@@ -42,6 +42,10 @@ Check DomainFront (chkdfront) - A tool verifies domain fronting.
 * Troubleshooting with various checks (ping, http, nslookup) when test fails. (optionally if succeeded).
 * Support testing though proxy
 
+## Demo
+Please check below demo
+https://asciinema.org/a/nA9wBiuSDLDH9SunQ8GxKT2ra
+
 ## Installation
 
     $ gem install chkdfront
