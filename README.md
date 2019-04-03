@@ -43,7 +43,7 @@ Check DomainFront (chkdfront) - A tool verifies domain fronting.
 * Support testing though proxy
 
 ## Demo
-Please check below demo
+Please check the demo
 https://asciinema.org/a/nA9wBiuSDLDH9SunQ8GxKT2ra
 
 ## Installation
