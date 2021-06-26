@@ -1,4 +1,4 @@
-name: Ruby Push Gem
+name: Push Ruby Gem
 
 on: workflow_dispatch
 
@@ -27,4 +27,5 @@ jobs:
           git push --follow-tags
       - name: Push to rubygems.org
         run: |
-          bundle exec gem release
+          gem build *.gemspec
+          gem push *.gem
