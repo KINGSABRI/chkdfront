@@ -31,7 +31,8 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'adomain'
 
   spec.add_development_dependency "bundler", "~> 2.0"
-  spec.add_development_dependency "rake", "~> 10.0"
+  spec.add_development_dependency "rake", ">= 12.3.3"
+
 
   spec.metadata['source_code_uri'] = 'https://github.com/KINGSABRI/chkdfront'
   spec.metadata['bug_tracker_uri'] = 'https://github.com/KINGSABRI/chkdfront/issues'
